@@ -27,9 +27,9 @@ def load_instruction_from_file(
 
 
 
-def helper_search(**kwargs):
+def helper_search(input: dict) -> dict:
     url = 'https://api.rentcast.io/v1/listings/sale'
-    params = {key:value for key, value in kwargs.items() if value is not None}
+    params = {key:value for key, value in input.items() if value is not None}
     headers = {"accept": "application/json",
                "X-API-Key": REAL_ESTATE_API_KEY}
     response = requests.get(url, headers=headers, params=params)

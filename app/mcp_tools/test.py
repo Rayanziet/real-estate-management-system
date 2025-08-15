@@ -1,5 +1,27 @@
-from app.mcp_tools.helper_function import helper_search, load_instruction_from_file
+import os
+import pandas as pd
+import warnings
+
+from dotenv import load_dotenv
+from helper_function import helper_search, load_instruction_from_file
 import ast
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+warnings.filterwarnings("ignore")
+pd.set_option("display.max_columns", None)
+
+
+load_dotenv()
+
+REAL_ESTATE_API_KEY = os.getenv("REAL_ESTATE_API_KEY")
+LLM_API_KEY = os.getenv("LLM_API_KEY")
+
+model = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.3,
+        google_api_key=LLM_API_KEY
+)
 def extract_param( query : str) -> dict:
     """
     Extract structured search parameters from natural language property query.

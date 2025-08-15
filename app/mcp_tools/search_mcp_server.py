@@ -8,7 +8,7 @@ import pandas as pd
 import ast
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from app.mcp_tools.helper_function import helper_search, load_instruction_from_file
+from helper_function import helper_search, load_instruction_from_file
 warnings.filterwarnings("ignore")
 pd.set_option("display.max_columns", None)
 
@@ -32,7 +32,7 @@ mcp = FastMCP(
     port='8787'
 )
 
-@mcp.tool
+@mcp.tool()
 def extract_param( query : str) -> dict:
     """
     Extract structured search parameters from natural language property query.
@@ -49,21 +49,21 @@ def extract_param( query : str) -> dict:
     #https://stackoverflow.com/questions/39807724/extract-python-dictionary-from-string
     return ast.literal_eval(response.content)
 
-@mcp.tool
-def search_properties(**kwargs):
+@mcp.tool()
+def search_properties(input: dict):
     """
     Search for real estate sale listings based on location, price, and property features.
     
     Args:
-        **kwargs: Search parameters including city, state, zipCode, priceMin, priceMax, 
+        input: Search parameters including city, state, zipCode, priceMin, priceMax, 
                  bedroomsMin, bathroomsMax, squareFeetMin, propertyType, limit, etc.
     
     Returns:
         Formatted response about properties matching the search criteria.
     """
-    result = helper_search(**kwargs)
+    result = helper_search(input)
     instructions = load_instruction_from_file("agent_response_instructions.txt")
-    response = model.invoke(f"You are a professional and friendly real estate agent.  The client's search parameters are: {json.dumps(kwargs, indent=2)} Here are the properties found: {json.dumps(result, indent=2)} Follow these instructions when preparing your response: {instructions}")
+    response = model.invoke(f"You are a professional and friendly real estate agent.  The client's search parameters are: {json.dumps(input, indent=2)} Here are the properties found: {json.dumps(result, indent=2)} Follow these instructions when preparing your response: {instructions}")
     return response.content
 
 if __name__ == "__main__":
