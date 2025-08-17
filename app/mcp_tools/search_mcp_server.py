@@ -8,7 +8,7 @@ import pandas as pd
 import ast
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from helper_function import helper_search, load_instruction_from_file
+from helper_function import helper_search, load_instruction_from_file, rag_pipeline
 warnings.filterwarnings("ignore")
 pd.set_option("display.max_columns", None)
 
@@ -65,6 +65,21 @@ def search_properties(input: dict):
     instructions = load_instruction_from_file("agent_response_instructions.txt")
     response = model.invoke(f"You are a professional and friendly real estate agent.  The client's search parameters are: {json.dumps(input, indent=2)} Here are the properties found: {json.dumps(result, indent=2)} Follow these instructions when preparing your response: {instructions}")
     return response.content
+
+@mcp.tool()
+def rag_pipeline_tool(query: str) -> str:
+    """
+    Retrieve relevant context from real estate documents using RAG (Retrieval-Augmented Generation).
+    
+    Args:
+        query: User's question or request for information
+    
+    Returns:
+        Answer to the question based on retrieved context
+    """
+    prompt = rag_pipeline(query)
+    response = model.invoke(prompt)
+    return response
 
 if __name__ == "__main__":
     mcp.run(transport="sse")

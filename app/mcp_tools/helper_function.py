@@ -1,8 +1,15 @@
 import json
 import urllib.parse
+from langchain_huggingface import HuggingFaceEmbeddings
 import requests
 import os
 from dotenv import load_dotenv
+from rag_pipeline_csv import csv_pipeline
+from rag_pipeline_pdf import pdf_pipeline
+from langchain.vectorstores.chroma import Chroma
+from langchain.prompts import ChatPromptTemplate
+
+
 
 load_dotenv()
 
@@ -35,3 +42,46 @@ def helper_search(input: dict) -> dict:
     response = requests.get(url, headers=headers, params=params)
     result = response.json()
     return result
+
+
+
+CHROMA_PATH = "chroma"
+PROMPT_TEMPLATE = """
+You are a professional real estate advisor. 
+Based on the following context extracted from official reports, studies, and CSV data:
+
+{context}
+
+Answer the following question in a clear and structured way:
+
+Question: {question}
+
+Provide:
+1. Summary answer
+2. Key data points or numbers if relevant
+3. Any caveats or assumptions
+"""
+
+#Ref for this function: https://github.com/pixegami/rag-tutorial-v2/blob/main/query_data.py
+def rag_pipeline(query: str):
+    embedder = HuggingFaceEmbeddings(model="BAAI/bge-m3")
+    db = Chroma(
+        persist_directory=CHROMA_PATH,
+        embedding_function=embedder
+    )
+
+    items = db.get(include=[]) 
+    if len(items["ids"]) == 0:
+        pdf_pipeline()
+        csv_pipeline()
+    #this condition was referenced by chatgpt, only to check if db is empty so we run the pipelines
+    #I tried db.count() but it didnt work, and i coudn't find a proper condition on google
+
+    results = db.similarity_search_with_score(query, k=5)
+    #similarity_search_with_score will manage embedding the query and searching for it
+    
+    context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
+    prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
+    prompt = prompt_template.format(context=context_text, question=query)
+
+    return prompt

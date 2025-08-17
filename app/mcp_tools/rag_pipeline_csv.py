@@ -7,7 +7,7 @@ from langchain.vectorstores.chroma import Chroma
 
 
 CHROMA_PATH = "chroma"
-DATA_PATH = "app\mcp_tools\data\csv_data"
+DATA_PATH = "data/csv_data"
 
 
 def load_csv_documents(csv_dir):

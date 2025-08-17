@@ -8,7 +8,7 @@ from langchain.schema.document import Document
 from langchain.vectorstores.chroma import Chroma
 
 CHROMA_PATH = "chroma"
-DATA_PATH = "app\mcp_tools\data\pdf_data"
+DATA_PATH = "data/pdf_data"
 
 
 def load_pdf_documents(pdf_dir):
