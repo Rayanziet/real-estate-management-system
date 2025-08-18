@@ -7,7 +7,7 @@ import pandas as pd
 import ast
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from helper_function import load_instruction_from_file, rag_pipeline
+from helper_function import load_instruction_from_file, rag_pipeline, gmail_create_draft
 warnings.filterwarnings("ignore")
 pd.set_option("display.max_columns", None)
 
@@ -59,6 +59,15 @@ def rag_pipeline_tool(query: str) -> str:
         print("Error invoking LLM:", e)
         return f"Error: {e}"
 
+@mcp.tool()
+def gmail_create_draft_tool(recipient: str, agent_name: str, address: str) -> str:
+    """
+    Create a draft email in Gmail.
+    """
+    draft = gmail_create_draft(recipient, agent_name, address)
+    if draft:
+        return f"Draft created successfully: {draft['id']}"
+    return "Failed to create draft."
 
 if __name__ == "__main__":
     mcp.run(transport="sse")
