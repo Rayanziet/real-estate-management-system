@@ -18,8 +18,3 @@ root_agent = LlmAgent(
     ],
 )
 
-# Optional: Add error handling for agent initialization
-if __name__ == "__main__":
-    print("Real Estate ADK Agent initialized successfully!")
-    print("MCP Tools configured for: http://127.0.0.1:8000/sse")
-    print("Make sure your MCP server is running before starting the ADK web interface.")
