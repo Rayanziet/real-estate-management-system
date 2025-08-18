@@ -3,8 +3,8 @@ import shutil
 from xml.dom.minidom import Document
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.vectorstores.chroma import Chroma
-
+from langchain_community.vectorstores import Chroma
+from config import get_chroma_db
 
 CHROMA_PATH = "chroma"
 DATA_PATH = "data/csv_data"
@@ -21,24 +21,18 @@ def load_csv_documents(csv_dir):
 
 #no need to split the csv files, as they are already structured and the columns are up to 4-5 columns only
 
-def embed_docs():
-    embedder = HuggingFaceEmbeddings(model="BAAI/bge-m3")
-    return embedder
 
 #this is used to create an identifier so the db won't store duplicates
 def calculate_row_ids(docs):
     for i, doc in enumerate(docs):
-        source = doc.metadata.get("source", "csv")
-        row_num = doc.metadata.get("row", i) 
-        doc.metadata["id"] = f"{source}:row-{row_num}"
+        source = doc.metadata.get("source", "unknown")
+        row_num = doc.metadata.get("row", i)
+        source_name = os.path.basename(source) if source else "csv"
+        doc.metadata["id"] = f"{source_name}:row-{row_num}"
     return docs
 
-
 def add_to_chroma(docs: list[Document]):
-    db = Chroma(
-        persist_directory=CHROMA_PATH,
-        embedding_function=embed_docs()
-    )
+    db = get_chroma_db()
     docs_with_ids = calculate_row_ids(docs)
     existing_items = db.get(include=[])
     existing_ids = set(existing_items["ids"])

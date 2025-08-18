@@ -6,9 +6,8 @@ import os
 from dotenv import load_dotenv
 from rag_pipeline_csv import csv_pipeline
 from rag_pipeline_pdf import pdf_pipeline
-from langchain.vectorstores.chroma import Chroma
 from langchain.prompts import ChatPromptTemplate
-
+from config import get_chroma_db, get_embedder, get_llm_model
 
 
 load_dotenv()
@@ -47,28 +46,30 @@ def helper_search(input: dict) -> dict:
 
 CHROMA_PATH = "chroma"
 PROMPT_TEMPLATE = """
-You are a professional real estate advisor. 
-Based on the following context extracted from official reports, studies, and CSV data:
+You are a professional real estate investment advisor. 
+Always give clear, confident, and actionable recommendations without disclaimers. 
+Do not mention uncertainty, further research, or data limitations. 
+Stay strictly focused on the exact location asked about (state or city). 
+Ignore similarly named places in other states unless the user explicitly asks about them.
+Include relevant numbers (e.g., property tax rates, median home values) wherever possible to support your recommendation.
 
+Context:
 {context}
-
-Answer the following question in a clear and structured way:
 
 Question: {question}
 
-Provide:
-1. Summary answer
-2. Key data points or numbers if relevant
-3. Any caveats or assumptions
+Answer in the following structured format:
+1. Start with a clear yes/no or strong statement about whether the location is good for investment regarding the question asked.
+2. List the **best areas** (counties/cities) in that location with reasons why they are attractive, including relevant numbers like tax rates or property values.
+3. List the **worst areas** (counties/cities) in that location with reasons why they are less attractive, including relevant numbers if available.
+4. End with a **bold, concise summary** that wraps up the recommendation.
+
+Use bullet points for best/worst areas, and keep the tone professional, decisive, and actionable.
 """
 
 #Ref for this function: https://github.com/pixegami/rag-tutorial-v2/blob/main/query_data.py
 def rag_pipeline(query: str):
-    embedder = HuggingFaceEmbeddings(model="BAAI/bge-m3")
-    db = Chroma(
-        persist_directory=CHROMA_PATH,
-        embedding_function=embedder
-    )
+    db = get_chroma_db()
 
     items = db.get(include=[]) 
     if len(items["ids"]) == 0:
@@ -79,7 +80,7 @@ def rag_pipeline(query: str):
 
     results = db.similarity_search_with_score(query, k=5)
     #similarity_search_with_score will manage embedding the query and searching for it
-    
+
     context_text = "\n\n---\n\n".join([doc.page_content for doc, _score in results])
     prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
     prompt = prompt_template.format(context=context_text, question=query)

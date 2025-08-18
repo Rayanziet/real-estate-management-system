@@ -5,7 +5,8 @@ from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema.document import Document
-from langchain.vectorstores.chroma import Chroma
+from langchain_community.vectorstores import Chroma
+from config import get_chroma_db
 
 CHROMA_PATH = "chroma"
 DATA_PATH = "data/pdf_data"
@@ -30,14 +31,9 @@ def split_documents(documents, chunk_size=1000, chunk_overlap=100):
     return text_splitter.split_documents(documents)
 
 
-def embed_docs():
-    embedder = HuggingFaceEmbeddings(model="BAAI/bge-m3")
-    return embedder
-
 def add_to_chroma(chunks: list[Document]):
-    db = Chroma(
-        persist_directory=CHROMA_PATH, embedding_function=embed_docs()
-    )
+    db = get_chroma_db()
+    
     chunks_with_ids = calculate_chunk_ids(chunks)
     existing_items = db.get(include=[]) 
     existing_ids = set(existing_items["ids"])

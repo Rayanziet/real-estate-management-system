@@ -1,0 +1,7 @@
+name: "real_estate_agent"
+model: "gemini-2.5-flash"
+tools:
+  - type: "mcp_toolset"
+    connection_params:
+      type: "sse"
+      url: "http://127.0.0.1:8001/sse"
