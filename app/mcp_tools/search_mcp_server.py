@@ -8,7 +8,7 @@ import pandas as pd
 import ast
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from helper_function import helper_search, load_instruction_from_file, rag_pipeline
+from helper_function import helper_search, load_instruction_from_file
 warnings.filterwarnings("ignore")
 pd.set_option("display.max_columns", None)
 
@@ -52,34 +52,19 @@ def extract_param( query : str) -> dict:
 @mcp.tool()
 def search_properties(input: dict):
     """
-    Search for real estate sale listings based on location, price, and property features.
+    Search for real estate sale listings and return RAW data.
     
     Args:
         input: Search parameters including city, state, zipCode, priceMin, priceMax, 
                  bedroomsMin, bathroomsMax, squareFeetMin, propertyType, limit, etc.
     
     Returns:
-        Formatted response about properties matching the search criteria.
+        Raw JSON array of property objects with ALL available fields.
     """
     result = helper_search(input)
-    instructions = load_instruction_from_file("agent_response_instructions.txt")
-    response = model.invoke(f"You are a professional and friendly real estate agent.  The client's search parameters are: {json.dumps(input, indent=2)} Here are the properties found: {json.dumps(result, indent=2)} Follow these instructions when preparing your response: {instructions}")
-    return response.content
+    return result
 
-@mcp.tool()
-def rag_pipeline_tool(query: str) -> str:
-    """
-    Retrieve relevant context from real estate documents using RAG (Retrieval-Augmented Generation).
-    
-    Args:
-        query: User's question or request for information
-    
-    Returns:
-        Answer to the question based on retrieved context
-    """
-    prompt = rag_pipeline(query)
-    response = model.invoke(prompt)
-    return response
+
 
 if __name__ == "__main__":
     mcp.run(transport="sse")
