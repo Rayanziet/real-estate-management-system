@@ -21,6 +21,7 @@ load_dotenv()
 
 REAL_ESTATE_API_KEY = os.getenv("REAL_ESTATE_API_KEY")
 LLM_API_KEY = os.getenv("LLM_API_KEY")
+GOOGLE_MAP_API_KEY = os.getenv("GOOGLE_Map_API_KEY")
 SCOPES = ['https://www.googleapis.com/auth/gmail.compose'] #this is to allow the app to create/modify draft emails
 
 def load_instruction_from_file(
@@ -207,3 +208,59 @@ def gmail_create_draft(recipient: str, agent_name: str, address: str):
 
     return draft
 
+# Ref: https://www.youtube.com/watch?v=s8XzpiWfq9I
+def get_distance_and_time(origin, destination, mode):
+    url = "https://maps.googleapis.com/maps/api/distancematrix/json"
+
+    params = {
+            "origins": origin,
+            "destinations": destination,
+            "mode": mode,
+            "units": "metric",
+            "key": GOOGLE_MAP_API_KEY
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    if data["status"] == "OK":
+        element = data["rows"][0]["elements"][0]
+        if element["status"] == "OK":
+            distance = element["distance"]["text"]
+            duration = element["duration"]["text"]
+            return distance, duration
+        else:
+            return None, f"Error: {element['status']}"
+    else:
+        return None, f"API Error: {data['status']}"
+    
+
+def get_coordinates(address):
+    """Convert address to latitude/longitude using Geocoding API"""
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {"address": address, "key": GOOGLE_MAP_API_KEY}
+    response = requests.get(url, params=params).json()
+
+    if response["status"] == "OK":
+        location = response["results"][0]["geometry"]["location"]
+        return location["lat"], location["lng"]
+    else:
+        raise Exception(f"Geocoding error: {response['status']}")
+
+def search_nearby(address, place_type):
+    lat, lng = get_coordinates(address)
+    radius = 2000
+    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    params = {
+        "location": f"{lat},{lng}",
+        "radius": radius,
+        "type": place_type,
+        "key": GOOGLE_MAP_API_KEY
+    }
+    response = requests.get(url, params=params).json()
+
+    if response["status"] == "OK":
+        return [place["name"] for place in response["results"]]
+    else:
+        raise Exception(f"Places API error: {response['status']}")
+    
