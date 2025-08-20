@@ -60,8 +60,10 @@ def search_properties(input: dict):
     Returns:
         Raw JSON array of property objects with ALL available fields.
     """
+    instructions = load_instruction_from_file("agent_response_instructions.txt")
     result = helper_search(input)
-    return result
+    response = model.invoke(f"Generate a response for the following search results: {result}, according to these searching parameters: {input} using these instructions: {instructions}")
+    return response
 
 
 if __name__ == "__main__":
