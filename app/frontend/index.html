@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏠 Real Estate Agent - AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .status-section {
+            margin-bottom: 30px;
+        }
+
+        .status-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #e9ecef;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-active { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-unknown { background-color: #ffc107; }
+
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .chat-header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            max-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant {
+            background: white;
+            color: #2c3e50;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+        }
+
+        .orchestrator-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-top: 8px;
+            text-transform: uppercase;
+        }
+
+        .langchain-badge {
+            background-color: #ff6b6b;
+            color: white;
+        }
+
+        .adk-badge {
+            background-color: #4ecdc4;
+            color: white;
+        }
+
+        .chat-input-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #007bff;
+        }
+
+        .send-button {
+            padding: 15px 25px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        .send-button:hover {
+            background: #0056b3;
+        }
+
+        .send-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tips {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .tips h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .tips ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .tips li {
+            margin-bottom: 5px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .tips li:before {
+            content: "•";
+            color: #1976d2;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Real Estate Agent</h1>
+            <p>Your AI-powered real estate assistant powered by LangChain and ADK agents</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="status-section">
+                    <h3>🔧 System Status</h3>
+                    <div id="status-items">
+                        <div class="status-item">
+                            <div class="status-indicator status-unknown"></div>
+                            <span>Agent: Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-indicator status-unknown"></div>
+                            <span>LangChain: Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-indicator status-unknown"></div>
+                            <span>ADK: Checking...</span>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-indicator status-unknown"></div>
+                            <span>LLM: Checking...</span>
+                        </div>
+                    </div>
+                    <button id="refresh-status" style="width: 100%; padding: 10px; margin-top: 15px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh Status</button>
+                </div>
+                
+                <div class="tips">
+                    <h4>💡 Tips</h4>
+                    <ul>
+                        <li>Ask about properties and market trends</li>
+                        <li>Request document analysis</li>
+                        <li>Get location-based information</li>
+                        <li>The agent routes queries automatically</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="chat-section">
+                <div class="chat-header">
+                    <h2>💬 Chat with Your Agent</h2>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message assistant">
+                        Hello! I'm your AI real estate assistant. I can help you with property searches, market analysis, document review, and more. What would you like to know?
+                    </div>
+                </div>
+                
+                <div class="chat-input-section">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Ask me about real estate..." />
+                    <button id="send-button" class="send-button">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const refreshStatusButton = document.getElementById('refresh-status');
+
+        // Check API status on load
+        checkStatus();
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+        refreshStatusButton.addEventListener('click', checkStatus);
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/status`);
+                if (response.ok) {
+                    const status = await response.json();
+                    updateStatus(status);
+                } else {
+                    updateStatusError();
+                }
+            } catch (error) {
+                updateStatusError();
+            }
+        }
+
+        function updateStatus(status) {
+            const statusItems = document.getElementById('status-items');
+            statusItems.innerHTML = `
+                <div class="status-item">
+                    <div class="status-indicator ${status.agent_status === 'active' ? 'status-active' : 'status-error'}"></div>
+                    <span>Agent: ${status.agent_status}</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator ${status.langchain_status.includes('active') ? 'status-active' : 'status-error'}"></div>
+                    <span>LangChain: ${status.langchain_status}</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator ${status.adk_status.includes('active') ? 'status-active' : 'status-error'}"></div>
+                    <span>ADK: ${status.adk_status}</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator ${status.llm_status === 'available' ? 'status-active' : 'status-error'}"></div>
+                    <span>LLM: ${status.llm_status}</span>
+                </div>
+            `;
+        }
+
+        function updateStatusError() {
+            const statusItems = document.getElementById('status-items');
+            statusItems.innerHTML = `
+                <div class="status-item">
+                    <div class="status-indicator status-error"></div>
+                    <span>Agent: Cannot connect</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator status-error"></div>
+                    <span>LangChain: Cannot connect</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator status-error"></div>
+                    <span>ADK: Cannot connect</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator status-error"></div>
+                    <span>LLM: Cannot connect</span>
+                </div>
+            `;
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            chatInput.value = '';
+
+            // Disable input and button
+            chatInput.disabled = true;
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<div class="loading"></div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        user_id: 'web_user'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        addMessage(data.response, 'assistant', data.orchestrator_used);
+                    } else {
+                        addErrorMessage(data.error || 'Unknown error occurred');
+                    }
+                } else {
+                    addErrorMessage(`API Error: ${response.status}`);
+                }
+            } catch (error) {
+                addErrorMessage(`Connection Error: ${error.message}`);
+            } finally {
+                // Re-enable input and button
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                sendButton.innerHTML = 'Send';
+                chatInput.focus();
+            }
+        }
+
+        function addMessage(content, role, orchestrator = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = content;
+            
+            if (orchestrator && role === 'assistant') {
+                const badgeClass = orchestrator.toLowerCase().includes('langchain') ? 'langchain-badge' : 'adk-badge';
+                messageDiv.innerHTML += `<div class="orchestrator-badge ${badgeClass}">${orchestrator}</div>`;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addErrorMessage(error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = `❌ Error: ${error}`;
+            chatMessages.appendChild(errorDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>
