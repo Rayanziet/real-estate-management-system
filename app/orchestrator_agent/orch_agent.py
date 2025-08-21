@@ -35,8 +35,8 @@ class Orchestrator:
 
     async def initialize_clients(self):
         """Initialize A2A clients for all configured agents following repo pattern."""
-        # Create a persistent HTTP client that stays open
-        self.httpx_client = httpx.AsyncClient()
+        # Create a persistent HTTP client that stays open with increased timeout
+        self.httpx_client = httpx.AsyncClient(timeout=300.0)  # 5 minutes timeout
         
         try:
             for name, base_url in self.base_urls.items():
@@ -110,7 +110,7 @@ class Orchestrator:
             
             self.logger.info("🚀 Sending message...")
             # Increase timeout for real estate agent processing
-            response = await asyncio.wait_for(client.send_message(request), timeout=120.0)
+            response = await asyncio.wait_for(client.send_message(request), timeout=300.0)
             
             self.logger.info("✅ Response received")
             response_dict = response.model_dump()
@@ -123,7 +123,7 @@ class Orchestrator:
             }
             
         except asyncio.TimeoutError:
-            error_message = f"Request to {agent_name} timed out after 2 minutes"
+            error_message = f"Request to {agent_name} timed out after 5 minutes"
             self.logger.error(f"❌ {error_message}")
             return {
                 'agent': agent_name,
