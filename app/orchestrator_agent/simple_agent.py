@@ -1,12 +1,18 @@
 import logging
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from enum import Enum
 
 # Import existing orchestrators
 from orch_agent import Orchestrator as LangChainOrchestrator
 from adk_orchestrator import ADKOrchestrator
 
+# Import Gemini for conversation management
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class OrchestratorType(Enum):
     """Enum for orchestrator types."""
@@ -16,8 +22,8 @@ class OrchestratorType(Enum):
 
 class SimpleAgent:
     """
-    Simple agent that routes queries to the appropriate orchestrator
-    and formats responses according to instructions.
+    Enhanced simple agent that manages conversations, routes queries to orchestrators,
+    and formats responses using Gemini 2.0 for professional output.
     """
     
     def __init__(self, langchain_url: str, adk_url: str):
@@ -27,6 +33,17 @@ class SimpleAgent:
         # Initialize orchestrators
         self.langchain_orchestrator = None
         self.adk_orchestrator = None
+        
+        # Initialize Gemini 2.0 for conversation management
+        self.gemini_model = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            temperature=0.3,
+            max_retries=5,
+            api_key=os.getenv("LLM_API_KEY")
+        )
+        
+        # Conversation history management
+        self.conversation_history: List[Dict[str, str]] = []
         
         # Load instructions
         self.instructions = self._load_instructions()
@@ -38,7 +55,7 @@ class SimpleAgent:
         )
         self.logger = logging.getLogger(__name__)
         
-        self.logger.info("🚀 Simple Agent initialized")
+        self.logger.info("🚀 Enhanced Simple Agent initialized with Gemini 2.0 conversation management")
     
     def _load_instructions(self) -> str:
         """Load instructions from the instructions file."""
@@ -57,7 +74,65 @@ class SimpleAgent:
             5. Maintain a helpful and professional tone
             6. If technical details are provided, explain them simply
             7. Always acknowledge the source (which orchestrator was used)
+            8. Maintain conversation context and flow
             """
+    
+    def _add_to_conversation_history(self, role: str, content: str):
+        """Add message to conversation history."""
+        self.conversation_history.append({
+            "role": role,
+            "content": content,
+            "timestamp": asyncio.get_event_loop().time()
+        })
+        
+        # Keep only last 10 messages to manage memory
+        if len(self.conversation_history) > 10:
+            self.conversation_history = self.conversation_history[-10:]
+    
+    def _get_conversation_context(self) -> str:
+        """Get recent conversation context for Gemini."""
+        if not self.conversation_history:
+            return ""
+        
+        context = "Recent conversation context:\n"
+        for msg in self.conversation_history[-5:]:  # Last 5 messages
+            context += f"{msg['role'].title()}: {msg['content']}\n"
+        return context
+    
+    async def _format_response_with_gemini(self, raw_response: str, user_query: str, orchestrator_used: str) -> str:
+        """Use Gemini 2.0 to format and enhance the response."""
+        try:
+            conversation_context = self._get_conversation_context()
+            
+            formatting_prompt = f"""
+            You are a professional real estate assistant. Format the following response to be user-friendly and professional.
+            
+            {conversation_context}
+            
+            USER'S ORIGINAL QUERY: {user_query}
+            ORCHESTRATOR USED: {orchestrator_used}
+            RAW RESPONSE FROM AGENT: {raw_response}
+            
+            Please format this response to be:
+            1. Professional and helpful
+            2. Easy to understand
+            3. Well-structured with clear sections
+            4. Conversational and engaging
+            5. Maintains context from the conversation
+            6. Adds helpful insights when appropriate
+            
+            Format the response professionally and make it sound natural in conversation.
+            """
+            
+            response = self.gemini_model.invoke(formatting_prompt)
+            formatted_response = response.content if hasattr(response, 'content') else str(response)
+            
+            return formatted_response
+            
+        except Exception as e:
+            self.logger.error(f"Error formatting response with Gemini: {e}")
+            # Fallback to original response if Gemini fails
+            return raw_response
     
     async def initialize(self):
         """Initialize both orchestrators."""
@@ -273,9 +348,13 @@ Please contact support for assistance.
     async def process_query(self, query: str) -> Dict[str, Any]:
         """
         Main method to process queries through the appropriate orchestrator.
+        Enhanced with Gemini 2.0 conversation management.
         """
         try:
             self.logger.info(f"🎯 Processing query: {query[:100]}...")
+            
+            # Add user query to conversation history
+            self._add_to_conversation_history("user", query)
             
             # Route the query
             orchestrator_type = self._route_query(query)
@@ -287,8 +366,18 @@ Please contact support for assistance.
             else:
                 response = await self._process_with_adk(query)
             
-            # Format the response
-            formatted_content = self._format_response(response, orchestrator_type, query)
+            # Extract raw content from response
+            raw_content = self._extract_content_from_response(response, orchestrator_type)
+            
+            # Use Gemini to format and enhance the response
+            formatted_content = await self._format_response_with_gemini(
+                raw_content, 
+                query, 
+                orchestrator_type.value
+            )
+            
+            # Add formatted response to conversation history
+            self._add_to_conversation_history("assistant", formatted_content)
             
             return {
                 'success': True,
@@ -300,11 +389,14 @@ Please contact support for assistance.
             
         except Exception as e:
             self.logger.error(f"❌ Error processing query: {e}")
+            error_response = f"Error processing query: {str(e)}"
+            self._add_to_conversation_history("assistant", error_response)
+            
             return {
                 'success': False,
                 'error': str(e),
                 'orchestrator_used': 'none',
-                'formatted_content': f"Error processing query: {str(e)}",
+                'formatted_content': error_response,
                 'query': query
             }
     
@@ -370,7 +462,7 @@ Please contact support for assistance.
             'agent_status': 'active',
             'langchain_status': 'unknown',
             'adk_status': 'unknown',
-            'timestamp': asyncio.get_event_loop().time()
+            'conversation_history_length': len(self.conversation_history)
         }
         
         # Check LangChain status
@@ -401,6 +493,19 @@ Please contact support for assistance.
             status['adk_status'] = f'error: {str(e)}'
         
         return status
+    
+    async def get_conversation_history(self) -> List[Dict[str, str]]:
+        """Get the conversation history."""
+        return self.conversation_history.copy()
+    
+    async def clear_conversation_history(self) -> bool:
+        """Clear the conversation history."""
+        try:
+            self.conversation_history.clear()
+            return True
+        except Exception as e:
+            self.logger.error(f"Error clearing conversation history: {e}")
+            return False
     
     async def cleanup(self):
         """Clean up all orchestrators."""

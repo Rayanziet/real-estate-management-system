@@ -170,6 +170,35 @@ async def chat_stream(request: ChatRequest):
         logger.error(f"Error processing streaming chat request: {e}")
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
+@app.get("/conversation")
+async def get_conversation_history():
+    global agent
+    if not agent:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+    
+    try:
+        history = await agent.get_conversation_history()
+        return {"conversation_history": history}
+    except Exception as e:
+        logging.error(f"Error getting conversation history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error getting conversation history: {str(e)}")
+
+@app.delete("/conversation")
+async def clear_conversation_history():
+    global agent
+    if not agent:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+    
+    try:
+        success = await agent.clear_conversation_history()
+        if success:
+            return {"message": "Conversation history cleared successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to clear conversation history")
+    except Exception as e:
+        logging.error(f"Error clearing conversation history: {e}")
+        raise HTTPException(status_code=500, detail=f"Error clearing conversation history: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
