@@ -8,30 +8,25 @@ from simple_agent import SimpleAgent
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
 app = FastAPI(
     title="Real Estate Agent API",
     description="API for Real Estate Agent with LLM Integration",
     version="1.0.0"
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to your Streamlit app domain
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Pydantic models
 class ChatRequest(BaseModel):
     message: str
     user_id: Optional[str] = "default_user"
@@ -48,7 +43,6 @@ class StatusResponse(BaseModel):
     adk_status: str
     llm_status: str
 
-# Global agent instance
 agent: Optional[SimpleAgent] = None
 
 @app.on_event("startup")
@@ -56,20 +50,17 @@ async def startup_event():
     """Initialize the agent on startup."""
     global agent
     try:
-        # Get configuration from environment variables
         langchain_url = os.getenv("LANGCHAIN_URL", "http://localhost:10005")
         adk_url = os.getenv("ADK_URL", "http://localhost:10002")
         
         logger.info(f"Initializing agent with LangChain: {langchain_url}, ADK: {adk_url}")
         
-        # Initialize the simple agent
         agent = SimpleAgent(langchain_url, adk_url)
         await agent.initialize()
         
-        logger.info("✅ Agent initialized successfully!")
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize agent: {e}")
+        logger.error(f"Failed to initialize agent: {e}")
         raise
 
 @app.on_event("shutdown")
@@ -78,7 +69,7 @@ async def shutdown_event():
     global agent
     if agent:
         await agent.cleanup()
-        logger.info("🧹 Agent cleanup completed")
+        logger.info("Agent cleanup completed")
 
 @app.get("/")
 async def root():
@@ -99,8 +90,7 @@ async def get_status():
     
     try:
         status = await agent.get_status()
-        # Add LLM status
-        status['llm_status'] = 'available'  # We'll enhance this later
+        status['llm_status'] = 'available'
         return StatusResponse(**status)
     except Exception as e:
         logger.error(f"Error getting status: {e}")
@@ -116,10 +106,8 @@ async def chat(request: ChatRequest):
     try:
         logger.info(f"Processing chat request: {request.message}")
         
-        # Process the query through the simple agent
         response = await agent.process_query(request.message)
         
-        # Format the response for the frontend
         if response.get('success', False):
             return ChatResponse(
                 response=response.get('formatted_content', 'No content available'),
@@ -146,10 +134,6 @@ async def chat_stream(request: ChatRequest):
         raise HTTPException(status_code=503, detail="Agent not initialized")
     
     try:
-        logger.info(f"Processing streaming chat request: {request.message}")
-        
-        # For now, we'll return a single response
-        # Later we can implement actual streaming
         response = await agent.process_query(request.message)
         
         if response.get('success', False):

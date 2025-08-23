@@ -97,7 +97,8 @@ def rag_pipeline(query: str):
     return prompt
 
 
-
+# Ref for the email functionality:
+# https://www.youtube.com/watch?v=N3vHJcHBS-w&list=WL&index=1&t=511s
 def email_msg(agent_name: str, property_address: str):
     """
     Generates a professional email template for requesting a meeting about a property.
@@ -140,11 +141,9 @@ def get_gmail_service():
     token_path = os.path.expanduser(os.getenv('GOOGLE_TOKEN_PATH'))
     credentials_path = os.path.expanduser(os.getenv('GOOGLE_CREDENTIALS_PATH'))
     
-    # The token file stores the user's access and refresh tokens
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
     
-    # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -156,7 +155,6 @@ def get_gmail_service():
                 credentials_path, SCOPES)
             creds = flow.run_local_server(port=0)
             
-        # Save the credentials for the next run
         os.makedirs(os.path.dirname(token_path), exist_ok=True)
         with open(token_path, 'w') as token:
             token.write(creds.to_json())

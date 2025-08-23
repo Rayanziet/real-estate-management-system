@@ -31,7 +31,6 @@ LLM_API_KEY = os.getenv("LLM_API_KEY")
 async def load_tools():
     """Load MCP tools with timeout and retry logic for robust connection."""
     try:
-        # Add timeout and retry logic for MCP connection
         sse_cm = sse_client("http://127.0.0.1:8787/sse")
         read_stream, write_stream = await asyncio.wait_for(sse_cm.__aenter__(), timeout=30.0)
         session_cm = ClientSession(read_stream, write_stream)
@@ -63,7 +62,6 @@ def create_graph_sp(model: ChatGoogleGenerativeAI, system_prompt: SystemMessage,
         tool_result = await tool_map["extract_param"].ainvoke(
             {"query": state["messages"][-1].content}
         ) 
-        # Convert string response to dictionary if needed
         if isinstance(tool_result, str):
             tool_result = ast.literal_eval(tool_result)
         return {"params": tool_result}
@@ -71,7 +69,6 @@ def create_graph_sp(model: ChatGoogleGenerativeAI, system_prompt: SystemMessage,
     async def search_properties_node(state: AgentState):
         """Search for properties using extracted parameters."""
         tool_result = await tool_map["search_properties"].ainvoke({"input": state["params"]})
-        # Return the raw tool result as properties, and create a simple message
         ai_message = AIMessage(content="Property search completed successfully")
         return {"properties": tool_result, "messages": [ai_message]}
 
@@ -112,7 +109,7 @@ class RealEstateAgent:
     SUPPORTED_CONTENT_TYPES = ["text/plain"]
     
     def __init__(self):
-        self.conversation_states = {}  # Store states by context_id
+        self.conversation_states = {}
     
     async def stream(self, query: str, context_id: str) -> AsyncGenerator[Dict[str, Any], None]:
         """
@@ -126,7 +123,6 @@ class RealEstateAgent:
         
         while retry_count < max_retries:
             try:
-                # Initialize or get existing state for this conversation
                 if context_id not in self.conversation_states:
                     self.conversation_states[context_id] = AgentState(
                         messages=[], params={}, properties={}
@@ -134,14 +130,12 @@ class RealEstateAgent:
                 
                 state = self.conversation_states[context_id]
                 
-                # Yield initial working status
                 yield {
                     "is_task_complete": False,
                     "require_user_input": False,
-                    "content": "🔍 Analyzing your property search request..."
+                    "content": "Analyzing your property search request..."
                 }
                 
-                # Get tools with retry logic
                 try:
                     tools, tool_map, session_cm, sse_cm = await get_or_initialize_tools()
                 except Exception as e:
@@ -150,21 +144,19 @@ class RealEstateAgent:
                         yield {
                             "is_task_complete": False,
                             "require_user_input": False,
-                            "content": f"⚠️ Connection issue, retrying... (attempt {retry_count}/{max_retries})"
+                            "content": f"Connection issue, retrying... (attempt {retry_count}/{max_retries})"
                         }
-                        await asyncio.sleep(2)  # Wait before retry
+                        await asyncio.sleep(2) 
                         continue
                     else:
                         raise e
                 
-                # Yield parameter extraction status
                 yield {
                     "is_task_complete": False,
                     "require_user_input": False,
-                    "content": "📋 Extracting search parameters from your query..."
+                    "content": "Extracting search parameters from your query..."
                 }
                 
-                # Create model and system prompt
                 model = ChatGoogleGenerativeAI(
                     model="gemini-2.5-flash",
                     temperature=0.3,
@@ -178,41 +170,31 @@ class RealEstateAgent:
                     "search tool. Focus on accuracy and completeness of data retrieval."
                 )
                 
-                # Add user message to state
                 state["messages"].append(HumanMessage(content=query))
                 
-                # Create and run the graph
                 graph = create_graph_sp(model, system_prompt, tools, tool_map)
                 
-                # Yield search status
                 yield {
                     "is_task_complete": False,
                     "require_user_input": False,
-                    "content": "🏠 Searching for properties matching your criteria..."
+                    "content": "Searching for properties matching your criteria..."
                 }
                 
-                # Execute the agent workflow with timeout
                 final_state = await asyncio.wait_for(graph.ainvoke(state), timeout=60.0)
                 
-                # Update stored state
                 self.conversation_states[context_id] = final_state
                 
-                # Get the final response
                 if final_state.get("properties"):
-                    # Use the actual property data from the search
                     properties_data = final_state["properties"]
                     if hasattr(properties_data, 'content'):
-                        # If it's an AIMessage, extract the content
                         response_content = properties_data.content
                     else:
-                        # If it's raw data, format it
                         response_content = f"Property Search Results:\n\n{properties_data}"
                 elif final_state["messages"] and isinstance(final_state["messages"][-1], AIMessage):
                     response_content = final_state["messages"][-1].content
                 else:
                     response_content = "I couldn't process your request. Please try again."
                 
-                # Check if the response indicates we need more information
                 needs_clarification = self._needs_user_input(response_content, final_state)
                 
                 if needs_clarification:
@@ -222,14 +204,11 @@ class RealEstateAgent:
                         "content": response_content + "\n\nWould you like to refine your search criteria?"
                     }
                 else:
-                    # Task complete - yield final response
                     yield {
                         "is_task_complete": True,
                         "require_user_input": False,
                         "content": response_content
                     }
-                
-                # Success - break out of retry loop
                 break
                     
             except asyncio.TimeoutError:
@@ -238,14 +217,14 @@ class RealEstateAgent:
                     yield {
                         "is_task_complete": False,
                         "require_user_input": False,
-                        "content": f"⏰ Request timed out, retrying... (attempt {retry_count}/{max_retries})"
+                        "content": f"Request timed out, retrying... (attempt {retry_count}/{max_retries})"
                     }
                     await asyncio.sleep(2)
                 else:
                     yield {
                         "is_task_complete": True,
                         "require_user_input": False,
-                        "content": "❌ Request timed out after multiple attempts. Please try again later."
+                        "content": "Request timed out after multiple attempts. Please try again later."
                     }
                     break
                     
@@ -255,7 +234,7 @@ class RealEstateAgent:
                     yield {
                         "is_task_complete": False,
                         "require_user_input": False,
-                        "content": f"⚠️ Error occurred, retrying... (attempt {retry_count}/{max_retries})"
+                        "content": f"Error occurred, retrying... (attempt {retry_count}/{max_retries})"
                     }
                     await asyncio.sleep(2)
                 else:
@@ -278,20 +257,14 @@ class RealEstateAgent:
         Returns:
             True if user input is required, False otherwise
         """
-        # If we have properties and they contain meaningful data, we don't need user input
         properties = state.get("properties")
         if properties is not None:
-            # If properties is a string, check if it has content
             if isinstance(properties, str) and properties.strip():
                 return False
-            # If properties is an AIMessage, check if it has content
             elif hasattr(properties, 'content') and properties.content and properties.content.strip():
                 return False
-            # If properties is other data, assume it's valid
             elif properties:
                 return False
-        
-        # Only ask for clarification if we have no properties at all
         return True
 
     async def cleanup(self):
@@ -304,10 +277,9 @@ class RealEstateAgent:
                 await sse_cm.__aexit__(None, None, None)
                 _global_tools_context = None
             except Exception as e:
-                pass  # Silent cleanup error
+                pass 
 
 
-# Legacy function for backward compatibility
 async def real_estate_agent(query: str, state: AgentState = None):
     """
     Legacy function - use RealEstateAgent.stream() for A2A

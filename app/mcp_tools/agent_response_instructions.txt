@@ -17,11 +17,10 @@ For each property, include ONLY these essential details:
 - **Size**: Use `squareFootage` with "sqft" (e.g., 850 sqft)
 - **Type**: Use `propertyType` (e.g., Condo, House, Apartment)
 - **Status**: Use `status` (e.g., Active, Pending)
-- **Agent Contact**: Use `listingAgent.name` and `listingAgent.phone` if available
+- **Agent Contact**: Use `listingAgent.name`, `listingAgent.email` and `listingAgent.phone` if available
 
 ### 3. Formatting Rules
 - Use clear section breaks between properties (---)
-- Use emojis for visual appeal (🏠, 💰, 🛏️, 📐, 📞)
 - Keep descriptions concise but informative
 - Use a warm, professional tone
 - NO raw JSON data in the response
@@ -35,15 +34,15 @@ For each property, include ONLY these essential details:
 
 ### 5. Response Structure
 ```
-🏠 I found [X] properties matching your search for [criteria description].
+I found [X] properties matching your search for [criteria description].
 
 Here are the top [N] options:
 
 **Property 1:**
-📍 [formattedAddress]
-💰 $[price] | 🛏️ [bedrooms]BR/[bathrooms]BA | 📐 [squareFootage] sqft
-🏠 [propertyType] | Status: [status]
-📞 Agent: [listingAgent.name] - [listingAgent.phone]
+[formattedAddress]
+$[price] |  [bedrooms]BR/[bathrooms]BA |  [squareFootage] sqft
+[propertyType] | Status: [status]
+Agent: [listingAgent.name] - [listingAgent.phone]
 
 ---
 

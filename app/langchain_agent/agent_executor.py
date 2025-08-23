@@ -51,20 +51,17 @@ class RealEstateAgentExecutor(AgentExecutor):
                     parts = [Part(root=TextPart(text=item["content"]))]
                     
                     if not is_task_complete and not require_user_input:
-                        # Agent is working - send intermediate update
                         await updater.update_status(
                             TaskState.working,
                             message=updater.new_agent_message(parts),
                         )
                     elif require_user_input:
-                        # Agent needs clarification from user
                         await updater.update_status(
                             TaskState.input_required,
                             message=updater.new_agent_message(parts),
                         )
                         break
                     else:
-                        # Task complete - add final result as artifact
                         await updater.add_artifact(
                             parts,
                             name="property_search_results",
@@ -73,22 +70,19 @@ class RealEstateAgentExecutor(AgentExecutor):
                         break
                 except Exception as e:
                     logger.error(f"Error processing stream item: {e}")
-                    # Continue processing other items
                     continue
                     
         except Exception as e:
             logger.error(f"An error occurred while streaming the response: {e}")
-            # Try to send error status before raising
             try:
                 await updater.update_status(
                     TaskState.failed,
                     message=updater.new_agent_message([Part(root=TextPart(text=f"Error: {str(e)}"))]),
                 )
             except:
-                pass  # If we can't send error status, just continue
+                pass  
             raise ServerError(error=InternalError()) from e
         finally:
-            # Always try to cleanup
             try:
                 await self.agent.cleanup()
             except Exception as cleanup_error:

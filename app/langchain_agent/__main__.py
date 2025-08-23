@@ -28,20 +28,17 @@ class MissingAPIKeyError(Exception):
 def main():
     """Starts the Real Estate Agent A2A server."""
     host = "localhost"
-    port = 10005  # Different port from the example
+    port = 10005  
     
     try:
-        # Check required environment variables
         if not os.getenv("LLM_API_KEY"):
             raise MissingAPIKeyError("LLM_API_KEY environment variable not set.")
         
         if not os.getenv("REAL_ESTATE_API_KEY"):
             raise MissingAPIKeyError("REAL_ESTATE_API_KEY environment variable not set.")
         
-        # Define agent capabilities
         capabilities = AgentCapabilities(streaming=True, pushNotifications=True)
         
-        # Define agent skills
         skills = [
             AgentSkill(
                 id="property_search",
@@ -66,7 +63,6 @@ def main():
             )
         ]
         
-        # Create agent card (this is what other agents will see)
         agent_card = AgentCard(
             name="Real Estate Search Agent",
             description="Specialized agent for searching real estate properties. Can extract search criteria from natural language queries and return detailed property listings with photos, prices, and contact information.",
@@ -85,7 +81,6 @@ def main():
             push_notifier=InMemoryPushNotifier(httpx_client),
         )
         
-        # Create the A2A server application
         server = A2AStarletteApplication(
             agent_card=agent_card, 
             http_handler=request_handler
@@ -94,7 +89,6 @@ def main():
         logger.info(f"Starting Real Estate Agent A2A server on {host}:{port}")
         logger.info(f"Agent capabilities: {[skill.name for skill in skills]}")
         
-        # Start the server
         uvicorn.run(server.build(), host=host, port=port)
         
     except MissingAPIKeyError as e:

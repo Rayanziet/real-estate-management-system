@@ -16,7 +16,7 @@ from a2a.types import (
     AgentCard,
     AgentSkill,
 )
-from root_agent import root_agent
+from root_agent import root_agent_runner
 from agent_executor import ADKAgentExecutor
 from dotenv import load_dotenv
 from starlette.applications import Starlette
@@ -45,8 +45,8 @@ def make_sync(func):
 @make_sync
 async def main(host, port):
     agent_card = AgentCard(
-        name=root_agent.name,
-        description=root_agent.description,
+        name=root_agent_runner.app_name,
+        description=root_agent_runner.agent.description,
         version='1.0.0',
         url=os.environ.get('APP_URL', 'http://localhost:10002'),
         defaultInputModes=['text', 'text/plain'],
@@ -106,12 +106,11 @@ async def main(host, port):
         ],
     )
 
-    # Use in-memory task store for simplicity
     task_store = InMemoryTaskStore()
 
     request_handler = DefaultRequestHandler(
         agent_executor=ADKAgentExecutor(
-            agent=root_agent,
+            agent=root_agent_runner.agent,
             status_message='Processing your real estate request...',
             artifact_name='real_estate_response',
         ),

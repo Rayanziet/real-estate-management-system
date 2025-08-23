@@ -68,7 +68,6 @@ class ADKAgentExecutor(AgentExecutor):
             user_id = 'a2a_user'
 
         try:
-            # Update status with custom message
             await updater.update_status(
                 TaskState.working,
                 new_agent_text_message(
@@ -76,7 +75,6 @@ class ADKAgentExecutor(AgentExecutor):
                 ),
             )
 
-            # Process with ADK agent
             session = await self.runner.session_service.create_session(
                 app_name=self.agent.name,
                 user_id=user_id,
@@ -101,10 +99,8 @@ class ADKAgentExecutor(AgentExecutor):
                         if hasattr(part, 'text') and part.text:
                             response_text += part.text + '\n'
                         elif hasattr(part, 'function_call'):
-                            # Log or handle function calls if needed
-                            pass  # Function calls are handled internally by ADK
+                            pass 
 
-            # Add response as artifact with custom name
             await updater.add_artifact(
                 [Part(root=TextPart(text=response_text))],
                 name=self.artifact_name,
